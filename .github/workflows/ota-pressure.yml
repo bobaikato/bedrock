@@ -29,6 +29,8 @@ jobs:
   deterministic-replay:
     name: Deterministic replay (${{ matrix.os }})
     runs-on: ${{ matrix.os }}
+    env:
+      OTA_POLICY: .ota/pressure-replay-policy.yaml
     strategy:
       fail-fast: false
       matrix:
@@ -50,6 +52,19 @@ jobs:
 
       - name: Diagnose readiness
         run: ota doctor
+
+      - name: Assert strict replay-input policy admission
+        if: matrix.os == 'ubuntu-latest'
+        shell: bash
+        run: |
+          ota doctor --workflow verify --json . > "$RUNNER_TEMP/ota-replay-policy-native.json"
+          jq -e '
+            .replay_input_policy.decision == "allow"
+            and .replay_input_policy.coverage == "complete"
+            and .replay_input_policy.required == true
+            and (.replay_input_policy.inputs | length == 4)
+            and (.replay_input_policy.inputs | all(.status == "matched"))
+          ' "$RUNNER_TEMP/ota-replay-policy-native.json"
 
       - name: Assert bounded proof is unknown before archival evidence exists
         if: matrix.os == 'ubuntu-latest'
@@ -117,9 +132,19 @@ jobs:
       - name: Archive workflow receipt
         run: ota receipt --workflow verify --json --archive .
 
+      - name: Upload native replay-input policy evidence
+        if: matrix.os == 'ubuntu-latest' && always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: ota-replay-input-policy-native
+          path: ${{ runner.temp }}/ota-replay-policy-native.json
+          if-no-files-found: error
+
   container-replay:
     name: Deterministic replay (container)
     runs-on: ubuntu-latest
+    env:
+      OTA_POLICY: .ota/pressure-replay-policy.yaml
     steps:
       - uses: actions/checkout@v4
 
@@ -133,6 +158,18 @@ jobs:
 
       - name: Diagnose container replay readiness
         run: ota doctor --workflow verify --container .
+
+      - name: Assert strict container replay-input policy admission
+        shell: bash
+        run: |
+          ota doctor --workflow verify --mode container --json . > "$RUNNER_TEMP/ota-replay-policy-container.json"
+          jq -e '
+            .replay_input_policy.decision == "allow"
+            and .replay_input_policy.coverage == "complete"
+            and .replay_input_policy.required == true
+            and (.replay_input_policy.inputs | length == 4)
+            and (.replay_input_policy.inputs | all(.status == "matched"))
+          ' "$RUNNER_TEMP/ota-replay-policy-container.json"
 
       - name: List runnable task modes
         run: ota tasks --use .
@@ -154,3 +191,11 @@ jobs:
 
       - name: Archive container workflow receipt
         run: ota receipt --workflow verify --json --archive .
+
+      - name: Upload replay-input policy evidence
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: ota-replay-input-policy-container
+          path: ${{ runner.temp }}/ota-replay-policy-container.json
+          if-no-files-found: error

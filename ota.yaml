@@ -536,6 +536,7 @@ agent:
     - gate:promoted
   protected_paths:
     - .github/workflows
+    - .ota/pressure-replay-policy.yaml
     - data/baseline.json
     - data/fixture.jsonl
     - data/store.db
@@ -543,5 +544,5 @@ agent:
     ota:
       note: Only install ota if it is missing and installation is approved.
       source:
-        kind: branch
-        branch: 1.6.25-implementation
+        kind: git_rev
+        rev: f97b96cc8437fe9e58736cc83422c8bf8e7d4636
