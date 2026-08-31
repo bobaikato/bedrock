@@ -1,4 +1,7 @@
 version: 1
+metadata:
+  ota:
+    minimum_version: "1.6.27"
 project:
   name: bedrock-replay-stability
   description: Deterministic offline NL-to-SQL stability replay with an explicitly separate live recording lane
@@ -545,4 +548,4 @@ agent:
       note: Only install ota if it is missing and installation is approved.
       source:
         kind: git_rev
-        rev: f97b96cc8437fe9e58736cc83422c8bf8e7d4636
+        rev: 52b53517f312b8dba66bd4a4dce53d96350bff69

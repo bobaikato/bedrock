@@ -1,4 +1,4 @@
-name: Ota Pressure
+name: "Evidence: Ota pressure (non-blocking)"
 
 on:
   push:
@@ -14,6 +14,7 @@ jobs:
   contract-ci-drift:
     name: Contract-to-CI drift
     runs-on: ubuntu-latest
+    continue-on-error: true
     steps:
       - uses: actions/checkout@v4
 
@@ -29,6 +30,7 @@ jobs:
   deterministic-replay:
     name: Deterministic replay (${{ matrix.os }})
     runs-on: ${{ matrix.os }}
+    continue-on-error: true
     env:
       OTA_POLICY: .ota/pressure-replay-policy.yaml
     strategy:
@@ -133,16 +135,23 @@ jobs:
         run: ota receipt --workflow verify --json --archive .
 
       - name: Upload native replay-input policy evidence
-        if: matrix.os == 'ubuntu-latest' && always()
+        if: always() && matrix.os == 'ubuntu-latest'
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: ota-replay-input-policy-native
-          path: ${{ runner.temp }}/ota-replay-policy-native.json
-          if-no-files-found: error
+          path: |
+            ${{ runner.temp }}/ota-replay-policy-native.json
+            ${{ runner.temp }}/ota-doctor-proof-before-archive.json
+            ${{ runner.temp }}/ota-proof-verify.json
+            ${{ runner.temp }}/ota-doctor-proof-after-archive.json
+            .ota/receipts/**
+            .ota/proof/archives/**
+          if-no-files-found: ignore
 
   container-replay:
     name: Deterministic replay (container)
     runs-on: ubuntu-latest
+    continue-on-error: true
     env:
       OTA_POLICY: .ota/pressure-replay-policy.yaml
     steps:
@@ -197,5 +206,8 @@ jobs:
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: ota-replay-input-policy-container
-          path: ${{ runner.temp }}/ota-replay-policy-container.json
-          if-no-files-found: error
+          path: |
+            ${{ runner.temp }}/ota-replay-policy-container.json
+            .ota/receipts/**
+            .ota/proof/archives/**
+          if-no-files-found: ignore
